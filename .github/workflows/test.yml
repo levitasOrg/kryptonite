@@ -1,0 +1,33 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install pytest
+      - run: python -m pytest -q scripts/tests
+      - name: Module frontmatter has name, description, applies-to
+        run: |
+          fail=0
+          for f in modules/*.md; do
+            [ "$(basename "$f")" = "_TEMPLATE.md" ] && continue
+            for key in name description applies-to; do
+              sed -n '2,/^---$/p' "$f" | grep -q "^$key:" || { echo "$f: missing $key"; fail=1; }
+            done
+          done
+          exit $fail
